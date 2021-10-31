@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  labels:
+    app: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio
+          args: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9001
+          volumeMounts:
+            - name: data
+              mountPath: "/data"
+              readOnly: false
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-deployment-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-app-svc
+spec:
+  selector:
+    app: minio
+  ports:
+    - protocol: TCP
+      port: 9001
+      targetPort: 9001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: config-nginx
+            mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: config-nginx
+        configMap:
+          name: nginx-configmap
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-app-svc
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: v1
+data:
+  default.conf: |-
+    server {
+        listen 80 default_server;
+        server_name _;
+        default_type text/plain;
+
+        location / {
+            return 200 '$HOSTNAME';
+        }
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: nginx-configmap
