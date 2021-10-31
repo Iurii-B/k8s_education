@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingresssvc3
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: minio-app-svc
+            port:
+              number: 9001
+      - path: /web
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-app-svc
+            port:
+              number: 80
